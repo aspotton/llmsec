@@ -4,7 +4,10 @@
 
 The initial release is intentionally small: inspect text at important application boundaries, collect typed security findings, and apply deterministic policy before content reaches or leaves an LLM. The longer-term roadmap expands this foundation into tool/action authorization, provenance and authority controls, data-lineage and source-influence enforcement, memory security, streaming controls, long-context defenses, and project-trained compact security models.
 
-> **Status:** pre-alpha. The V0.1 heuristic prompt-injection detector is a bootstrap implementation, not a claim that prompt injection is solved. See [Security limitations](docs/security/limitations.md).
+> [!CAUTION]
+> ## 🧪 Alpha / Experimental
+>
+> llmsec is under active development. Expect breaking changes and incomplete security coverage. Do not rely on it as the only protection for production LLM or agent workloads yet. See [Security limitations](docs/security/limitations.md).
 
 ## Quick start
 
