@@ -95,9 +95,9 @@ When a Unicode code point is security-relevant because of its exact identity, in
 For example:
 
 ```python
-full_width = "\uFF21\uFF22\uFF23"
-zero_width_space = "\u200B"
-bidi_override = "\u202E"
+full_width = "\uff21\uff22\uff23"
+zero_width_space = "\u200b"
+bidi_override = "\u202e"
 ```
 
 This keeps security fixtures auditable and allows Ruff's ambiguous-Unicode checks to remain enabled.

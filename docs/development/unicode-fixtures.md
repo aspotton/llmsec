@@ -9,9 +9,9 @@ When a non-ASCII character is security-relevant because of its code point or inv
 For example, prefer:
 
 ```python
-raw = "\uFF21\uFF22\uFF23"  # FULLWIDTH LATIN CAPITAL LETTERS A, B, C
-zero_width_space = "\u200B"
-bidi_override = "\u202E"
+raw = "\uff21\uff22\uff23"  # FULLWIDTH LATIN CAPITAL LETTERS A, B, C
+zero_width_space = "\u200b"
+bidi_override = "\u202e"
 ```
 
 over:
@@ -36,7 +36,7 @@ Example:
 
 ```python
 def test_nfkc_normalization_is_available_without_mutating_raw() -> None:
-    raw = "\uFF21\uFF22\uFF23"  # Full-width A, B, C.
+    raw = "\uff21\uff22\uff23"  # Full-width A, B, C.
 
     views = build_content_views(raw)
 
