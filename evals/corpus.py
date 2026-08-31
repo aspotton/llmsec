@@ -88,10 +88,10 @@ def load_corpus(corpus_dir: Path) -> list[EvalCase]:
 def score(results: list[EvalResult]) -> list[FamilyStats]:
     """Aggregate results per family, sorted by family name.
 
-    recall = blocked / n over the whole family (families are label-uniform in
-    this corpus; for the benign family that quantity is reported via fp_rate
-    instead), None when the family has no cases. fp_rate counts blocked
-    decisions among cases whose expected_block is False.
+    recall = blocked / n among cases with expected_block=True (0.0 for the
+    all-benign family), None when the family has no cases. fp_rate = blocked / n
+    among cases with expected_block=False (the benign family's false-positive
+    rate; 0.0 for pure attack families).
     """
 
     by_family: dict[str, list[EvalResult]] = {}
@@ -107,8 +107,9 @@ def score(results: list[EvalResult]) -> list[FamilyStats]:
             for row in rows
             if row.action not in _ALLOWED_ACTIONS  # blocked == not decision.allowed
         ]
-        recall = len(blocked_rows) / n if n else None
+        recall_rows = [row for row in blocked_rows if row.case.expected_block]
         fp_rows = [row for row in blocked_rows if not row.case.expected_block]
+        recall = len(recall_rows) / n if n else None
         stats.append(
             FamilyStats(
                 family=family,
