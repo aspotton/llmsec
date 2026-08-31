@@ -1,6 +1,14 @@
 from llmsec.core.context import SecurityContext
 from llmsec.core.decision import Decision
-from llmsec.core.enums import DecisionAction, DetectorCost, Profile, Severity, Stage, Trust
+from llmsec.core.enums import (
+    DecisionAction,
+    DetectorCost,
+    Profile,
+    Severity,
+    Stage,
+    Trust,
+    severity_rank,
+)
 from llmsec.core.finding import Finding, Span
 
 __all__ = [
@@ -14,4 +22,5 @@ __all__ = [
     "Span",
     "Stage",
     "Trust",
+    "severity_rank",
 ]

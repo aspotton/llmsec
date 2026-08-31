@@ -2,13 +2,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from llmsec.core import Decision, DecisionAction, Finding, SecurityContext, Severity
-
-_SEVERITY_RANK = {
-    Severity.LOW: 1,
-    Severity.MEDIUM: 2,
-    Severity.HIGH: 3,
-    Severity.CRITICAL: 4,
-}
+from llmsec.core.enums import severity_rank
 
 
 class Policy(Protocol):
@@ -40,12 +34,12 @@ class DefaultPolicy:
         risk = max((finding.confidence for finding in findings), default=0.0)
         should_block = any(
             finding.confidence >= self.block_threshold
-            and _SEVERITY_RANK[finding.severity] >= _SEVERITY_RANK[self.minimum_block_severity]
+            and severity_rank(finding.severity) >= severity_rank(self.minimum_block_severity)
             for finding in findings
         )
         should_confirm = any(
             finding.confidence >= self.confirm_threshold
-            and _SEVERITY_RANK[finding.severity] >= _SEVERITY_RANK[self.minimum_block_severity]
+            and severity_rank(finding.severity) >= severity_rank(self.minimum_block_severity)
             for finding in findings
         )
         if should_block:
