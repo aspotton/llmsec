@@ -83,7 +83,7 @@ def main() -> int:
                     f"{finding.category:28} "
                     f"{finding.confidence:.2f}  {finding.message}"
                 )
-        return 2 if result.blocked else 0
+        return 0 if result.allowed else 2
 
     parser.error("unknown command")
     return 2
