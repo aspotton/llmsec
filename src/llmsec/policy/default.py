@@ -26,6 +26,7 @@ class Policy(Protocol):
 class DefaultPolicy:
     block_threshold: float = 0.90
     minimum_block_severity: Severity = Severity.HIGH
+    confirm_threshold: float = 0.75
 
     def decide(
         self,
@@ -42,7 +43,17 @@ class DefaultPolicy:
             and _SEVERITY_RANK[finding.severity] >= _SEVERITY_RANK[self.minimum_block_severity]
             for finding in findings
         )
-        action = DecisionAction.BLOCK if should_block else DecisionAction.ALLOW
+        should_confirm = any(
+            finding.confidence >= self.confirm_threshold
+            and _SEVERITY_RANK[finding.severity] >= _SEVERITY_RANK[self.minimum_block_severity]
+            for finding in findings
+        )
+        if should_block:
+            action = DecisionAction.BLOCK
+        elif should_confirm:
+            action = DecisionAction.CONFIRM
+        else:
+            action = DecisionAction.ALLOW
         return Decision(
             action=action,
             content=content,
