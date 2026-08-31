@@ -1,7 +1,8 @@
 import asyncio
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from typing import Final
 
 from llmsec.content import build_content_views
 from llmsec.core import Decision, Profile, SecurityContext, Stage, Trust
@@ -16,6 +17,12 @@ from llmsec.detectors import (
 from llmsec.execution import execute_detectors
 from llmsec.policy import DefaultPolicy, Policy
 
+PROFILE_POLICIES: Final[Mapping[Profile, DefaultPolicy]] = {
+    Profile.CHAT: DefaultPolicy(),
+    Profile.RAG: DefaultPolicy(confirm_threshold=0.80, block_threshold=0.88),
+    Profile.AGENT: DefaultPolicy(confirm_threshold=0.85, block_threshold=0.85),
+}
+
 
 @dataclass(slots=True)
 class Guard:
@@ -24,7 +31,7 @@ class Guard:
     diagnostics: bool = False
 
     @classmethod
-    def default(cls, *, diagnostics: bool = False) -> "Guard":
+    def default(cls, *, policy: DefaultPolicy | None = None, diagnostics: bool = False) -> "Guard":
         return cls(
             detectors=[
                 UnicodeDetector(),
@@ -33,14 +40,13 @@ class Guard:
                 ContextAnomalyDetector(),
                 HeuristicInjectionDetector(),
             ],
-            policy=DefaultPolicy(),
+            policy=policy or DefaultPolicy(),
             diagnostics=diagnostics,
         )
 
     @classmethod
     def from_profile(cls, profile: Profile, *, diagnostics: bool = False) -> "Guard":
-        del profile
-        return cls.default(diagnostics=diagnostics)
+        return cls.default(policy=PROFILE_POLICIES[profile], diagnostics=diagnostics)
 
     def add_detector(self, detector: Detector) -> None:
         self.detectors.append(detector)
