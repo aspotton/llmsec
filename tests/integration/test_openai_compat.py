@@ -14,12 +14,12 @@ from types import SimpleNamespace
 from typing import Final
 
 import pytest
-from llmsec.integrations.openai_compat import GuardedChatClient, GuardViolation
 
 from llmsec import Decision, DetectorCost, Finding, Guard, Severity, Stage
 from llmsec.content import ContentViews
 from llmsec.detectors import DetectorSpec, FunctionDetector
 from llmsec.detectors.injection import _PATTERNS
+from llmsec.integrations.openai_compat import GuardedChatClient, GuardViolation
 from llmsec.policy import DefaultPolicy
 
 pytestmark = pytest.mark.integration
@@ -284,7 +284,6 @@ def test_confirm_sanitize_mode_proceeds_without_invoking_handler() -> None:
     assert substituted[-1]["content"] == "hello"
 
 
-@pytest.mark.xfail(strict=False)
 async def test_async_input_block_raises_violation_from_await() -> None:
     """(g) Async client: the exposed create returns an awaitable and GuardViolation
     propagates from the await -- identical fail-closed semantics to the sync path.
@@ -302,7 +301,6 @@ async def test_async_input_block_raises_violation_from_await() -> None:
     assert fake.call_count == 0
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=False)
 def test_stream_holdback_raises_before_releasing_violation_text() -> None:
     """(h) Streaming holdback (F1 protocol): a COMPLETE violation inside the first
     scan window is never released.
@@ -328,7 +326,6 @@ def test_stream_holdback_raises_before_releasing_violation_text() -> None:
     assert "ignore previous instructions" not in leaked.lower()
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=False)
 def test_stream_clean_exhaustion_flushes_every_chunk() -> None:
     """(h) Flush-on-exhaustion contract: clean chunks, each smaller than holdback,
     must ALL be yielded (whole, in order) when the iterator ends -- including the
@@ -345,7 +342,6 @@ def test_stream_clean_exhaustion_flushes_every_chunk() -> None:
     assert yielded == chunks
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=False)
 def test_sanitize_stream_construction_rejected() -> None:
     """(i) mode="sanitize" + stream=True must raise ValueError at stream
     construction: already-yielded text cannot be rewritten, so the combination is

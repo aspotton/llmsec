@@ -3,40 +3,51 @@
 Wraps any object exposing the OpenAI surface ``chat.completions.create``
 (OpenAI, Azure OpenAI, LiteLLM, vLLM/Ollama compat servers). This module never
 imports ``openai``/``anthropic`` or any other SDK: the wrapped client is
-duck-typed, so the security runtime adds no provider dependencies.
+duck-typed, so the security runtime adds no provider dependencies. The
+per-call primitives (decision mapping, streaming holdback) live in
+``llmsec.integrations._openai_compat_stream``, split at the LOC review ceiling;
+``GuardViolation`` and ``Mode`` are re-exported from there.
 
 Scope ceiling: post-generation gating is NOT applied in ``mode="gate"`` (the
 output phase is inspected only in ``block``/``sanitize`` modes, see
 ``_MODES_OUTPUT``). Applications that need gate-style output control call
 ``guard.inspect_model_output()`` themselves and run their own handler.
 
-Streaming is not implemented in this revision: any ``stream=True`` call raises
-``NotImplementedError`` (streaming holdback lands in the follow-up todo).
+Streaming (``stream=True``) holds back output: chunk objects are buffered and
+their concatenated delta text scanned in ``holdback``-sized windows before any
+chunk is released (guarantees and ceilings documented in the stream module).
+``mode="sanitize"`` refuses streaming outright -- already-yielded text cannot
+be rewritten -- and ``gate`` mode streams pass through unscanned.
 """
 
-from collections.abc import Callable, Sequence
+import inspect
+from collections.abc import Callable
 from functools import partial, wraps
-from typing import Any, Final, Literal
+from typing import Any, Final
 
-from llmsec.core import Decision, DecisionAction, Stage, Trust
+from llmsec.core import Decision, Stage, Trust
 from llmsec.guard import Guard
-
-Mode = Literal["block", "sanitize", "gate"]
+from llmsec.integrations._openai_compat_stream import (
+    GuardViolation as GuardViolation,
+)
+from llmsec.integrations._openai_compat_stream import (
+    Mode as Mode,
+)
+from llmsec.integrations._openai_compat_stream import (
+    _AGuardedStream,
+    _apply_output_replacement,
+    _assistant_text,
+    _extract_input_text,
+    _GuardedStream,
+    _handle,
+    _substitute_last,
+)
 
 _ALL_MODES: Final[frozenset[str]] = frozenset(("block", "sanitize", "gate"))
 
 # Modes whose model output is inspected. Gate mode deliberately skips the
-# output phase (see the scope-ceiling note above).
+# output phase (see the scope-ceiling note in the module docstring).
 _MODES_OUTPUT: Final[frozenset[str]] = frozenset(("block", "sanitize"))
-
-
-class GuardViolation(RuntimeError):
-    """Raised when policy stops a guarded call before or after the provider."""
-
-    def __init__(self, *, reason: str, decision: Decision | None = None) -> None:
-        super().__init__(f"llmsec {reason}")
-        self.reason = reason
-        self.decision = decision
 
 
 def default_confirm_handler(decision: Decision) -> bool:
@@ -49,52 +60,6 @@ def default_confirm_handler(decision: Decision) -> bool:
     return False
 
 
-def _extract_input_text(messages: object) -> str:
-    """Flatten an SDK ``messages`` value to inspectable text (defensive)."""
-    if isinstance(messages, str):
-        return messages
-    if isinstance(messages, Sequence):
-        return "\n".join(str(message.get("content", "")) for message in messages)
-    return str(messages)
-
-
-def _assistant_text(response: object) -> str | None:
-    """Read ``choices[0].message.content`` from an SDK response, else None."""
-    seam: Any = response  # ponytail: SDK duck-type seam
-    try:
-        return str(seam.choices[0].message.content)
-    except (AttributeError, IndexError, TypeError):
-        return None
-
-
-def _handle(
-    decision: Decision,
-    *,
-    phase: str,
-    mode: Mode,
-    confirm_handler: Callable[[Decision], bool],
-) -> str | None:
-    """Map a Decision onto this call: pass, substitute text, or raise.
-
-    Returns replacement content when the caller's data should be rewritten,
-    ``None`` to let the call proceed; raises ``GuardViolation`` otherwise.
-    """
-    if decision.allowed:
-        return None
-    match decision.action:
-        case DecisionAction.CONFIRM:
-            if mode == "sanitize":
-                return decision.content
-            if mode == "gate":
-                if not confirm_handler(decision):
-                    raise GuardViolation(reason="confirmation_required", decision=decision)
-                return None
-        case _:
-            pass
-    # BLOCK, a CONFIRM under mode="block", or any future non-allowed action.
-    raise GuardViolation(reason=f"{phase}_blocked", decision=decision)
-
-
 def _pre_input(
     guard: Guard,
     kwargs: dict[str, Any],
@@ -104,11 +69,10 @@ def _pre_input(
 ) -> dict[str, Any]:
     """Inspect outgoing messages; return kwargs, substituting on sanitize.
 
-    Substitution replaces the LAST mapping's content in a fully copied list:
-    caller data is never mutated. Ceiling: DefaultPolicy wires no rewriter, so
-    substituted content equals the inspected original text; and replacing the
-    joined inspection text via the last message is only exact for
-    single-message requests (multi-message sanitize would duplicate text).
+    Ceiling: DefaultPolicy wires no rewriter (substituted content equals the
+    original), and last-message replacement of the joined inspection text is
+    single-message-correct only -- the same ceiling as the no-SANITIZE-emission
+    rule.
     """
     messages = kwargs.get("messages")
     if messages is None:
@@ -119,14 +83,27 @@ def _pre_input(
     replacement = _handle(decision, phase="input", mode=mode, confirm_handler=confirm_handler)
     if replacement is None:
         return kwargs
-    if isinstance(messages, str):
-        return {**kwargs, "messages": replacement}
-    if isinstance(messages, Sequence) and len(messages) > 0:
-        copied: list[Any] = [dict(m) if isinstance(m, dict) else m for m in messages]
-        if isinstance(copied[-1], dict):
-            copied[-1] = {**copied[-1], "content": replacement}
-            return {**kwargs, "messages": copied}
-    return {**kwargs, "messages": replacement}
+    return {**kwargs, "messages": _substitute_last(messages, replacement)}
+
+
+async def _apre_input(
+    guard: Guard,
+    kwargs: dict[str, Any],
+    *,
+    mode: Mode,
+    confirm_handler: Callable[[Decision], bool],
+) -> dict[str, Any]:
+    """Async twin of ``_pre_input``: awaits ``guard.ainspect`` (sync inspect is loop-hostile)."""
+    messages = kwargs.get("messages")
+    if messages is None:
+        return kwargs
+    decision = await guard.ainspect(
+        _extract_input_text(messages), stage=Stage.USER_INPUT, trust=Trust.UNKNOWN
+    )
+    replacement = _handle(decision, phase="input", mode=mode, confirm_handler=confirm_handler)
+    if replacement is None:
+        return kwargs
+    return {**kwargs, "messages": _substitute_last(messages, replacement)}
 
 
 def _post_output(
@@ -136,34 +113,48 @@ def _post_output(
     mode: Mode,
     confirm_handler: Callable[[Decision], bool],
 ) -> None:
-    """Inspect assistant text; block raises, sanitize rewrites in place.
-
-    SDK response models are mutable, so the substitution updates
-    ``choices[0].message.content`` on the SAME response object.
-    """
+    """Inspect assistant text; block raises, sanitize rewrites in place."""
     text = _assistant_text(response)
     if text is None:
         return
     decision = guard.inspect(text, stage=Stage.MODEL_OUTPUT, trust=Trust.UNKNOWN)
-    replacement = _handle(decision, phase="output", mode=mode, confirm_handler=confirm_handler)
-    if replacement is None:
-        return
-    seam: Any = response  # ponytail: SDK duck-type seam
-    seam.choices[0].message.content = replacement
+    _apply_output_replacement(response, decision, mode=mode, confirm_handler=confirm_handler)
 
 
-def _create_sync(
+async def _apost_output(
+    guard: Guard,
+    response: object,
     *,
-    inner: Callable[..., object],
+    mode: Mode,
+    confirm_handler: Callable[[Decision], bool],
+) -> None:
+    """Async twin of ``_post_output``: awaits ``guard.ainspect`` for the output phase."""
+    text = _assistant_text(response)
+    if text is None:
+        return
+    decision = await guard.ainspect(text, stage=Stage.MODEL_OUTPUT, trust=Trust.UNKNOWN)
+    _apply_output_replacement(response, decision, mode=mode, confirm_handler=confirm_handler)
+
+
+def _create(
+    *,
+    inner: Callable[..., Any],  # ponytail: SDK duck-type seam (sync or async callable)
     guard: Guard,
     mode: Mode,
     holdback: int,
     confirm_handler: Callable[[Decision], bool],
     **kwargs: Any,  # ponytail: SDK duck-type seam (caller kwargs passthrough)
-) -> object:
-    """Run one guarded non-streaming call; delegate streaming to the stub."""
-    if kwargs.get("stream"):
-        return _create_stream(
+) -> Any:  # ponytail: result or awaitable, per the wrapped create's own kind
+    """Run one guarded call: dispatch on async-ness, then on the stream flag.
+
+    Sanitize + streaming is refused synchronously here (already-yielded text
+    cannot be rewritten), before any coroutine or iterator is constructed.
+    """
+    stream = bool(kwargs.get("stream"))
+    if stream and mode == "sanitize":
+        raise ValueError("llmsec: sanitize mode requires non-streaming")
+    if inspect.iscoroutinefunction(inner):
+        return _acreate(
             inner=inner,
             guard=guard,
             mode=mode,
@@ -173,22 +164,44 @@ def _create_sync(
         )
     kwargs = _pre_input(guard, kwargs, mode=mode, confirm_handler=confirm_handler)
     response = inner(**kwargs)
+    if stream:
+        if mode not in _MODES_OUTPUT:
+            return response  # gate mode: output phase is never inspected
+
+        def scan(text: str) -> None:
+            decision = guard.inspect(text, stage=Stage.MODEL_OUTPUT, trust=Trust.UNKNOWN)
+            _handle(decision, phase="output", mode=mode, confirm_handler=confirm_handler)
+
+        return _GuardedStream(response, scan=scan, holdback=holdback)
     if mode in _MODES_OUTPUT:
         _post_output(guard, response, mode=mode, confirm_handler=confirm_handler)
     return response
 
 
-def _create_stream(
+async def _acreate(
     *,
-    inner: Callable[..., object],
+    inner: Callable[..., Any],  # ponytail: SDK duck-type seam (async callable)
     guard: Guard,
     mode: Mode,
     holdback: int,
     confirm_handler: Callable[[Decision], bool],
     **kwargs: Any,  # ponytail: SDK duck-type seam (caller kwargs passthrough)
-) -> object:
-    """Streaming entry point; holdback streaming lands in the follow-up todo."""
-    raise NotImplementedError("llmsec streaming guard mode is not implemented yet")
+) -> Any:  # ponytail: result or async-iterable stream
+    """Async guarded call: both phases await ``guard.ainspect`` (sync guard is loop-hostile)."""
+    kwargs = await _apre_input(guard, kwargs, mode=mode, confirm_handler=confirm_handler)
+    response = await inner(**kwargs)
+    if kwargs.get("stream"):
+        if mode not in _MODES_OUTPUT:
+            return response  # gate mode: output phase is never inspected
+
+        async def scan(text: str) -> None:
+            decision = await guard.ainspect(text, stage=Stage.MODEL_OUTPUT, trust=Trust.UNKNOWN)
+            _handle(decision, phase="output", mode=mode, confirm_handler=confirm_handler)
+
+        return _AGuardedStream(response, scan=scan, holdback=holdback)
+    if mode in _MODES_OUTPUT:
+        await _apost_output(guard, response, mode=mode, confirm_handler=confirm_handler)
+    return response
 
 
 class GuardedChatClient:
@@ -272,7 +285,7 @@ class _Completions:
             # the sanctioned attr (callers see the SDK create's signature).
             return wraps(inner_create)(
                 partial(
-                    _create_sync,
+                    _create,
                     inner=inner_create,
                     guard=self._guarded._guard,
                     mode=self._guarded._mode,
