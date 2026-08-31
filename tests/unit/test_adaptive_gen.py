@@ -15,15 +15,23 @@ Assumed API (kept intentionally minimal):
   ``id == f"{base_id}_{mutation}"``. For base64-family rows, ``text`` is the
   encoded payload itself (pure base64, no surrounding prose).
 - ``gen_adaptive.write_rows(rows: list[dict], root: Path) -> None`` — writes
-  ``<root>/<split>/cases.jsonl``, one row per line, each line exactly
-  ``json.dumps(row, sort_keys=True) + "\\n"`` (byte-stable for --regenerate).
+  ``<root>/<dir_key(row)>/cases.jsonl``, one row per line, each line exactly
+  ``json.dumps(row, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+  + "\\n"`` (byte-stable for --regenerate).
 
-Split rule pinned here (calibrated against the shipped detectors):
-whitespace_split evades the word-boundary heuristic, so its rows are held-OUT;
-every other generated row must self-block under Guard.default and is held-IN.
-The ``--regenerate`` byte-compare contract (re-running the writer over a fresh
-seed must reproduce the fixture bytes) is exercised by the CI step, not here,
-to keep the assumed surface to ``generate``/``write_rows``.
+RECONCILED (todo 3) against the final design; original intents kept intact:
+
+- Layout is dir-per-``dir_key`` (``<transform>__<family>`` etc.), not
+  dir-per-split; canonical bytes use compact separators + ``ensure_ascii``.
+  Generation is pure in memory, so tests write only into ``tmp_path``.
+- The split is MEASURED at generation (run today's guard): whitespace_split
+  rows that the guard now catches become held-in tripwires, so that test
+  asserts at least one measured held-out gap row plus per-row consistency with
+  a fresh measurement instead of blanket held-out.
+- ``generate`` also appends the 6 hand-authored benignmutate rows
+  (``expected_block=False``); the schema test expects True only for
+  attack-derived rows. The measured-split / self-block / uniqueness /
+  determinism assertions are untouched.
 """
 
 import json
@@ -58,14 +66,18 @@ def test_split_labels_are_plain_strings() -> None:
 def test_generate_row_schema_and_split_values() -> None:
     """generate() returns non-empty rows keyed exactly
     {id, expected_block, text, mutation, base_id, split}; every split is one of
-    the two labels, both labels occur, and expected_block is True throughout
-    (benign-mutate rows are hand-authored, never generated)."""
+    the two labels and both labels occur. Attack-derived rows keep
+    ``expected_block is True``; the 6 hand-authored benignmutate rows carry
+    ``False`` (they must stay Allowed, guarding the benign FP budget)."""
     rows = _rows()
     assert rows
     splits = set()
     for row in rows:
         assert set(row) == {"id", "expected_block", "text", "mutation", "base_id", "split"}
-        assert row["expected_block"] is True
+        if row["mutation"] == "benignmutate":
+            assert row["expected_block"] is False, row["id"]
+        else:
+            assert row["expected_block"] is True, row["id"]
         assert row["id"] == f"{row['base_id']}_{row['mutation']}"
         assert row["split"] in {gen_adaptive.HELD_IN, gen_adaptive.HELD_OUT}
         splits.add(row["split"])
@@ -113,28 +125,48 @@ def test_held_in_rows_self_block_under_default_guard() -> None:
         )
 
 
-def test_whitespace_split_rows_are_held_out() -> None:
-    """Calibrated gap: whitespace_split breaks the word-boundary heuristic, so
-    those rows exist and are assigned to the held-OUT split, never held-in."""
+def test_whitespace_split_rows_use_measured_split() -> None:
+    """Calibrated gap: whitespace_split breaks the word-boundary heuristic on
+    SOME bases, so at least one such row is a measured held-OUT gap. Splits are
+    measured at generation, so rows the guard does catch become held-IN
+    tripwires: every row's label must match a fresh measurement here."""
+    guard = Guard.default(diagnostics=True)
     rows = [row for row in _rows() if row["mutation"] == "whitespace_split"]
     assert rows, "generate() must include whitespace_split rows"
+    assert any(row["split"] == gen_adaptive.HELD_OUT for row in rows), (
+        "generate() must include measured held-out whitespace_split gap rows"
+    )
     for row in rows:
-        assert row["split"] == gen_adaptive.HELD_OUT, row["id"]
+        decision = guard.inspect(
+            row["text"],
+            stage=Stage.RETRIEVAL_DOCUMENT,
+            trust=Trust.UNTRUSTED,
+        )
+        allowed = decision.action == DecisionAction.ALLOW
+        want = gen_adaptive.HELD_OUT if allowed else gen_adaptive.HELD_IN
+        assert row["split"] == want, row["id"]
 
 
-def test_write_rows_writes_canonical_jsonl_per_split(tmp_path: Path) -> None:
-    """write_rows(rows, root) creates exactly <root>/<split>/cases.jsonl for the
-    splits present, holding that split's rows in generate() order, each line
-    byte-equal to json.dumps(row, sort_keys=True) + newline."""
+def test_write_rows_writes_canonical_jsonl_per_dir_key(tmp_path: Path) -> None:
+    """write_rows(rows, root) creates exactly <root>/<dir_key(row)>/cases.jsonl
+    for the dir keys present, holding that dir's rows in generate() order, each
+    line byte-equal to json.dumps(row, sort_keys=True, ensure_ascii=True,
+    separators=(",", ":")) + newline. Only tmp_path is touched: generate() is
+    pure in memory and write_rows writes to the explicit root."""
     rows = _rows()
     gen_adaptive.write_rows(rows, tmp_path)
-    splits = {row["split"] for row in rows}
-    expected_files = {tmp_path / split / "cases.jsonl" for split in splits}
+    dir_keys = {gen_adaptive.dir_key(row) for row in rows}
+    expected_files = {tmp_path / name / "cases.jsonl" for name in dir_keys}
     assert expected_files == set(tmp_path.rglob("cases.jsonl"))
-    for split in splits:
-        body = (tmp_path / split / "cases.jsonl").read_text(encoding="utf-8")
+    fixed_families = {case.family for case in load_corpus(_FIXTURES)}
+    assert not dir_keys & fixed_families
+    for name in dir_keys:
+        body = (tmp_path / name / "cases.jsonl").read_text(encoding="utf-8")
         assert body.endswith("\n")
         lines = body.splitlines()
-        split_rows = [row for row in rows if row["split"] == split]
-        assert lines == [json.dumps(row, sort_keys=True) for row in split_rows]
+        dir_rows = [row for row in rows if gen_adaptive.dir_key(row) == name]
+        assert lines == [
+            json.dumps(row, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+            for row in dir_rows
+        ]
         assert all(line.isascii() for line in lines)
