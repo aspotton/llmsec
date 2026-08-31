@@ -2,7 +2,7 @@
 
 `llmsec` is a local-first, low-latency security runtime for applications that use large language models.
 
-The initial release is intentionally small: inspect text at important application boundaries, collect typed security findings, and apply deterministic policy before content reaches or leaves an LLM. The longer-term roadmap expands this foundation into tool/action authorization, provenance and authority controls, data-lineage and source-influence enforcement, memory security, streaming controls, long-context defenses, and project-trained compact security models.
+The initial release is intentionally small: inspect text at important application boundaries, collect typed security findings, and apply deterministic policy before content reaches or leaves an LLM. The longer-term roadmap expands this foundation into tool/action authorization, provenance and authority controls, data-lineage and source-influence enforcement, memory security, richer streaming controls, long-context defenses, and project-trained compact security models.
 
 > [!CAUTION]
 > ## 🧪 Alpha / Experimental
