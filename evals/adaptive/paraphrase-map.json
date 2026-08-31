@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {"pattern": "\\bignore\\b", "replacement": "overlook", "notes": "keyword verb; kills injection VERB1 and the 'ignore' hint literal"},
+    {"pattern": "\\bdisregard\\b", "replacement": "neglect", "notes": "keyword verb; drops the injection VERB1 token"},
+    {"pattern": "\\boverride\\b", "replacement": "overrule", "notes": "keyword verb; also clears the 'override' hint literal"},
+    {"pattern": "\\bforget\\b", "replacement": "omit", "notes": "keyword verb; drops the injection VERB1 token"},
+    {"pattern": "\\binstructions\\b", "replacement": "directives", "notes": "plural first so it precedes the singular entry; breaks NOUN1/NOUN2 and the 'previous instructions' hint"},
+    {"pattern": "\\binstruction\\b", "replacement": "directive", "notes": "singular NOUN1/NOUN2"},
+    {"pattern": "\\brules\\b", "replacement": "guidelines", "notes": "plural NOUN1 (rules)"},
+    {"pattern": "\\brule\\b", "replacement": "guideline", "notes": "singular NOUN1 (rule)"},
+    {"pattern": "\\bprompt\\b", "replacement": "preamble", "notes": "NOUN1/NOUN2; also breaks the 'system prompt' and 'reveal .* prompt' hint phrases"},
+    {"pattern": "\\bsystem\\b", "replacement": "initial", "notes": "MIDDLE1/MIDDLE2; breaks the 'system prompt' hint and the 'system message/override/instruction' fake-authority phrases"},
+    {"pattern": "\\bprevious\\b", "replacement": "earlier", "notes": "MIDDLE1; drops the 'previous instructions' hint literal"},
+    {"pattern": "\\bprior\\b", "replacement": "earlier", "notes": "MIDDLE1 synonym, same class"},
+    {"pattern": "\\bdeveloper\\b", "replacement": "engineer", "notes": "MIDDLE1/MIDDLE2; breaks 'developer message' fake-authority phrase"}
+  ]
+}

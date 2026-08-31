@@ -21,9 +21,11 @@ by ``gen_adaptive.generate`` from :data:`SPLIT`.
 
 import base64
 import codecs
+import json
 import random
 import re
 from collections.abc import Callable
+from pathlib import Path
 
 from corpus import EvalCase
 
@@ -116,9 +118,29 @@ def _rot13(text: str, rng: random.Random) -> list[str]:
     return [codecs.decode(text, "rot_13")]
 
 
+# Hand-authored synonym miss-map (semantic held-out family), read lazily on first use.
+_PARAPHRASE_MAP = Path(__file__).parent / "adaptive" / "paraphrase-map.json"
+_PARAPHRASE_ENTRIES: list[dict] | None = None
+
+
+def _paraphrase_entries() -> list[dict]:
+    """Return the synonym entries, reading the JSON once at first use."""
+    global _PARAPHRASE_ENTRIES
+    if _PARAPHRASE_ENTRIES is None:
+        _PARAPHRASE_ENTRIES = json.loads(_PARAPHRASE_MAP.read_text(encoding="utf-8"))["entries"]
+    return _PARAPHRASE_ENTRIES
+
+
 def _paraphrase_io(text: str, rng: random.Random) -> list[str]:
-    """STUB: return the base unchanged. Todo 4 wires the real paraphrase map."""
+    """Paraphrase via the miss-map, entries applied in list order (all matches).
+
+    Every ``replacement`` is authored to match neither ``injection._PATTERNS`` nor
+    ``encoding._INJECTION_HINT`` (pinned by a map-miss test), so the result is a
+    real paraphrase the regex detectors miss. rng unused; input never mutated.
+    """
     del rng
+    for entry in _paraphrase_entries():
+        text = re.sub(entry["pattern"], entry["replacement"], text, flags=re.IGNORECASE)
     return [text]
 
 
