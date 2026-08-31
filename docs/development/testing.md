@@ -19,6 +19,8 @@ Every bug fix should add a regression test. New detectors should include positiv
 
 Larger adaptive/model evaluations belong under `evals/` so every commit does not require an expensive benchmark run.
 
+The `evals/` workspace now has a first working piece: a fixed static corpus under `evals/fixtures/` and a stdlib runner, `PYTHONPATH=src python3 evals/run_eval.py`. It scores every case through `Guard.default()` and fails (exit 1) only when an asserted family drops below its recall floor or the benign false-positive rate exceeds `--max-benign-fp`; everything else is printed measured-only. See [`evals/README.md`](../../evals/README.md) for what the numbers do and do not claim. This is a fixed-benchmark tripwire, not adaptive robustness evidence; adaptive evals are roadmap item [08](../roadmap/08-adaptive-evaluation.md).
+
 
 ## Adversarial Unicode fixtures
 
