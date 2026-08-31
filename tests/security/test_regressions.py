@@ -2,7 +2,8 @@ import base64
 
 import pytest
 
-from llmsec import Guard
+from llmsec import DecisionAction, Finding, Guard, SecurityContext, Severity
+from llmsec.policy import DefaultPolicy
 
 pytestmark = pytest.mark.security
 
@@ -30,3 +31,42 @@ def test_benign_security_discussion_is_not_claimed_to_be_robust() -> None:
     # semantic understanding. The long-term model/eval roadmap addresses this limitation.
     result = Guard.default().inspect_user_input("Explain what prompt injection means.")
     assert result.allowed
+
+
+def test_confirm_emitted_in_mid_confidence_band() -> None:
+    # A HIGH finding between confirm_threshold and block_threshold must resolve CONFIRM,
+    # not the old silent ALLOW. 0.89 is the fake_authority detector's operating point.
+    policy = DefaultPolicy()
+    for confidence in (0.80, 0.89):
+        finding = Finding("detector", "category", confidence, Severity.HIGH, "mid-band finding")
+        decision = policy.decide(
+            content="x", context=SecurityContext(), findings=(finding,), metrics={}
+        )
+        assert decision.action is DecisionAction.CONFIRM
+
+
+def test_confirm_does_not_change_block_or_allow() -> None:
+    policy = DefaultPolicy()
+    blocking = Finding("detector", "category", 0.95, Severity.HIGH, "high confidence finding")
+    decision = policy.decide(
+        content="x", context=SecurityContext(), findings=(blocking,), metrics={}
+    )
+    assert decision.action is DecisionAction.BLOCK
+
+    low_severity = Finding("detector", "category", 0.99, Severity.LOW, "low severity finding")
+    decision = policy.decide(
+        content="x", context=SecurityContext(), findings=(low_severity,), metrics={}
+    )
+    assert decision.action is DecisionAction.ALLOW
+
+    decision = policy.decide(content="x", context=SecurityContext(), findings=(), metrics={})
+    assert decision.action is DecisionAction.ALLOW
+
+
+def test_confirm_uses_same_severity_gate() -> None:
+    policy = DefaultPolicy()
+    finding = Finding("detector", "category", 0.85, Severity.MEDIUM, "below severity gate")
+    decision = policy.decide(
+        content="x", context=SecurityContext(), findings=(finding,), metrics={}
+    )
+    assert decision.action is DecisionAction.ALLOW
