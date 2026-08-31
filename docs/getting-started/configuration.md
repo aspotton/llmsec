@@ -31,4 +31,6 @@ guard = Guard.from_profile(Profile.AGENT)
 | `Profile.RAG` | 0.80 | 0.88 | Retrieval content: confirm band before a lower block bar. |
 | `Profile.AGENT` | 0.85 | 0.85 | Agentic tool use: widest CONFIRM band, lowest block bar. |
 
+The CLI applies the same presets: `llmsec scan --profile <chat|rag|agent>` (omit for the chat/defaults policy).
+
 Profiles change policy thresholds only. The detector set is identical to `Guard.default()` for every profile; `Guard.default(policy=...)` accepts an explicit `DefaultPolicy` override.

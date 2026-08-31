@@ -8,6 +8,7 @@ Important limitations:
 - Unicode coverage is intentionally incomplete;
 - encoded-content inspection is currently limited to bounded printable Base64 candidates;
 - there is no first-class tool/action reference monitor yet;
+- the OpenAI-compatible wrapper (`llmsec.integrations.openai_compat`) inspects text at one integration seam; it is not a tool/action reference monitor;
 - there is no provenance/authority or data-lineage engine yet;
 - long-context fragmentation is not solved;
 - there is no streaming holdback or token-level scanning;

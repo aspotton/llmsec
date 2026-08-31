@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from llmsec import Guard, Stage, Trust
+from llmsec import Guard, Profile, Stage, Trust
 
 
 def _read_input(path: str) -> str:
@@ -41,6 +41,7 @@ def _serialize(result: object) -> str:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the ``llmsec`` CLI."""
     parser = argparse.ArgumentParser(prog="llmsec")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -58,16 +59,26 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     scan.add_argument("--json", action="store_true", help="emit structured JSON")
     scan.add_argument("--diagnostics", action="store_true", help="include timing diagnostics")
+    scan.add_argument(
+        "--profile",
+        choices=[profile.value for profile in Profile],
+        default=None,
+        help="policy preset; omit = chat/defaults",
+    )
     return parser
 
 
 def main() -> int:
+    """Run the CLI; exit 0 when the decision is allowed, 2 otherwise."""
     parser = _build_parser()
     args = parser.parse_args()
 
     if args.command == "scan":
         content = _read_input(args.path)
-        guard = Guard.default(diagnostics=args.diagnostics)
+        if args.profile:
+            guard = Guard.from_profile(Profile(args.profile), diagnostics=args.diagnostics)
+        else:
+            guard = Guard.default(diagnostics=args.diagnostics)
         result = guard.inspect(
             content,
             stage=Stage(args.stage),

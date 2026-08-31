@@ -13,4 +13,6 @@ Initial project scaffold:
 - `Guard.from_profile(Profile.CHAT | RAG | AGENT)` configures per-profile policy presets; `Guard.default(policy=...)` accepts an explicit policy override.
 - Eval baseline corpus (54 cases across four attack families plus benign) and `evals/run_eval.py`, a stdlib fixed-benchmark tripwire runner with recall/false-positive floors.
 - Behavior change: a `Severity.HIGH` fake-authority finding at confidence 0.89 now resolves CONFIRM instead of the previous silent ALLOW.
+- `llmsec.integrations.openai_compat.GuardedChatClient`: dependency-free, duck-typed OpenAI-compatible wrapper inspecting `chat.completions.create` (sync/async, block/sanitize/gate modes, streaming holdback); `GuardViolation` exported from `llmsec`.
+- CLI: `llmsec scan --profile <chat|rag|agent>` applies the profile policy presets.
 - CLI, examples, tests, GitHub Actions, documentation hierarchy, and roadmap.

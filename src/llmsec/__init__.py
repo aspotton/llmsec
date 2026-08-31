@@ -11,6 +11,7 @@ from llmsec.core import (
 )
 from llmsec.detectors import detector
 from llmsec.guard import Guard
+from llmsec.integrations.openai_compat import GuardViolation
 
 __all__ = [
     "Decision",
@@ -18,6 +19,7 @@ __all__ = [
     "DetectorCost",
     "Finding",
     "Guard",
+    "GuardViolation",
     "Profile",
     "SecurityContext",
     "Severity",

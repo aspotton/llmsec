@@ -29,6 +29,12 @@ Start with the human-facing `README.md` for installation and a quick example.
 - [Limitations](security/limitations.md)
 - [Research notes](security/research-notes.md)
 
+## Guides
+
+- [Chat applications](guides/chat.md)
+- [RAG applications](guides/rag.md)
+- [OpenAI-compatible wrapper](guides/openai-compat.md)
+
 ## Roadmap
 
 See [Roadmap](roadmap/README.md).
