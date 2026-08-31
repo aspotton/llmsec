@@ -61,6 +61,7 @@ result = guard.inspect(
 - A deliberately simple heuristic injection detector used only as a bootstrap semantic detector.
 - Findings separated from policy decisions.
 - Synchronous, asynchronous, batch, and convenience APIs.
+- Profile presets: `guard = Guard.from_profile(Profile.AGENT)` for per-application-shape policy thresholds.
 - A small CLI.
 - Security regression tests and GitHub Actions on pushes and pull requests.
 

@@ -12,6 +12,7 @@ Important limitations:
 - long-context fragmentation is not solved;
 - there is no streaming holdback or token-level scanning;
 - the default policy emits only ALLOW, CONFIRM, and BLOCK; CONFIRM requires an application or human check before use, and SANITIZE, QUARANTINE, and ESCALATE are still never emitted;
+- profile presets (`Guard.from_profile`) tune policy thresholds only; they do not yet change the detector set;
 - no classifier can be assumed robust against an adaptive attacker merely because it performs well on a fixed benchmark.
 
 Applications should not interpret `DecisionAction.ALLOW` as proof that content is safe. It means the configured V0.1 checks did not trigger a blocking rule.
