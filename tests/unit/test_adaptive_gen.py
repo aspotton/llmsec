@@ -2,19 +2,19 @@
 
 TDD red phase: ``evals/gen_adaptive.py`` does not exist yet, so this file fails
 to collect with ModuleNotFoundError. Todo 3 must implement exactly the assumed
-API below to turn it green — do not weaken these assertions, satisfy them.
+API below to turn it green -- do not weaken these assertions, satisfy them.
 
 Assumed API (kept intentionally minimal):
 
 - ``gen_adaptive.HELD_IN == "held_in"`` / ``gen_adaptive.HELD_OUT == "held_out"``
   (plain ``str`` split labels).
-- ``gen_adaptive.generate(seed: int) -> list[dict]`` — loads the fixed-corpus
+- ``gen_adaptive.generate(seed: int) -> list[dict]`` -- loads the fixed-corpus
   attack bases itself, runs the mutation library, assigns ``split``, and
   returns every in-memory row in a deterministic order. Row keys are exactly
   ``{id, expected_block, text, mutation, base_id, split}`` with
   ``id == f"{base_id}_{mutation}"``. For base64-family rows, ``text`` is the
   encoded payload itself (pure base64, no surrounding prose).
-- ``gen_adaptive.write_rows(rows: list[dict], root: Path) -> None`` — writes
+- ``gen_adaptive.write_rows(rows: list[dict], root: Path) -> None`` -- writes
   ``<root>/<dir_key(row)>/cases.jsonl``, one row per line, each line exactly
   ``json.dumps(row, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
   + "\\n"`` (byte-stable for --regenerate).
