@@ -1,8 +1,8 @@
 """Host-side reference monitor for proposed tool calls.
 
 Exposes the typed vocabularies plus the tool spec/call/capability/approval and
-authorization-decision types. The registry (todo 4) and the monitor itself
-(todo 5) are re-exported here as they land; until then importing those names
+authorization-decision types and the tool registry. The monitor itself
+(todo 5) is re-exported here when it lands; until then importing that name
 from this package raises ``ImportError``.
 """
 
@@ -13,6 +13,7 @@ from llmsec.actions.enums import (
     EffectClass,
     ParamRole,
 )
+from llmsec.actions.registry import RegistryError, ToolRegistry, registry_from_dict
 from llmsec.actions.types import (
     Approval,
     AuthorizationDecision,
@@ -34,8 +35,11 @@ __all__ = [
     "EffectClass",
     "ParamKind",
     "ParamRole",
+    "RegistryError",
     "ToolCall",
     "ToolParam",
+    "ToolRegistry",
     "ToolSpec",
     "proposal_sha256",
+    "registry_from_dict",
 ]
