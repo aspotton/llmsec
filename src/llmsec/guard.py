@@ -4,8 +4,16 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
+from llmsec.actions.enums import AuthorizationAction
+from llmsec.actions.monitor import ReferenceMonitor
+from llmsec.actions.types import (
+    Approval,
+    AuthorizationDecision,
+    ToolCall,
+    proposal_sha256,
+)
 from llmsec.content import build_content_views
-from llmsec.core import Decision, Profile, SecurityContext, Stage, Trust
+from llmsec.core import Decision, Finding, Profile, SecurityContext, Stage, Trust
 from llmsec.detectors import (
     ContextAnomalyDetector,
     Detector,
@@ -29,6 +37,10 @@ class Guard:
     detectors: list[Detector]
     policy: Policy
     diagnostics: bool = False
+    # Appended last with a default so legacy positional construction
+    # ``Guard(detectors, policy, diagnostics)`` keeps working; keyword-only in
+    # practice. Deny-by-default: None means authorize_tool_call never allows.
+    monitor: ReferenceMonitor | None = None
 
     @classmethod
     def default(cls, *, policy: DefaultPolicy | None = None, diagnostics: bool = False) -> "Guard":
@@ -50,6 +62,26 @@ class Guard:
 
     def add_detector(self, detector: Detector) -> None:
         self.detectors.append(detector)
+
+    def authorize_tool_call(
+        self,
+        call: ToolCall,
+        approval: Approval | None = None,
+        findings: tuple[Finding, ...] = (),
+    ) -> AuthorizationDecision:
+        """Commit gate for a proposed tool call; deny-by-default without a monitor.
+
+        ``findings`` is a host-supplied, tightening-only input, never computed
+        here. With no monitor configured this never raises and never allows.
+        """
+        if self.monitor is None:
+            return AuthorizationDecision(
+                action=AuthorizationAction.DENY,
+                proposal_sha256=proposal_sha256(call),
+                reason="no_monitor",
+                findings=findings,
+            )
+        return self.monitor.authorize(call, approval=approval, findings=findings)
 
     async def ainspect(
         self,
