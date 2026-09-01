@@ -59,27 +59,36 @@ TOCTOU rule for hosts: an approval authorizes exactly one byte-exact call. Commi
 
 ```python
 from llmsec import (
-    Approval, Capability, EffectClass, Guard, ParamKind, ParamRole,
-    ReferenceMonitor, ToolCall, ToolParam, ToolSpec, ToolRegistry,
+    Approval,
+    Capability,
+    EffectClass,
+    Guard,
+    ParamKind,
+    ParamRole,
+    ReferenceMonitor,
+    ToolCall,
+    ToolParam,
+    ToolSpec,
+    ToolRegistry,
 )
 from llmsec.actions import proposal_sha256
 
 registry = ToolRegistry()
-registry.register(ToolSpec(
-    name="email.send",
-    effects=frozenset({EffectClass.DATA_EGRESS}),
-    params=(
-        ToolParam("to", kind=ParamKind.STR, role=ParamRole.DESTINATION),
-        ToolParam("body", kind=ParamKind.STR, role=ParamRole.PAYLOAD),
-    ),
-))
+registry.register(
+    ToolSpec(
+        name="email.send",
+        effects=frozenset({EffectClass.DATA_EGRESS}),
+        params=(
+            ToolParam("to", kind=ParamKind.STR, role=ParamRole.DESTINATION),
+            ToolParam("body", kind=ParamKind.STR, role=ParamRole.PAYLOAD),
+        ),
+    )
+)
 
 guard = Guard.default()
 guard.monitor = ReferenceMonitor(
     registry=registry,
-    capabilities=frozenset({
-        Capability("email.send", frozenset({EffectClass.DATA_EGRESS}))
-    }),
+    capabilities=frozenset({Capability("email.send", frozenset({EffectClass.DATA_EGRESS}))}),
 )
 
 call = ToolCall(tool="email.send", arguments={"to": "ops@corp.example", "body": "hi"})
