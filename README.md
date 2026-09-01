@@ -144,7 +144,7 @@ mypy src
 pytest
 ```
 
-CI runs these checks automatically on pushes and pull requests. Fast security regressions also run in a dedicated workflow.
+CI runs these checks automatically on pushes and pull requests. Fast security regressions also run in a dedicated workflow, which additionally gates the adaptive mutation-ladder eval suite under `evals/adaptive/`. See [Evals](evals/README.md) for what both eval tracks measure and do not claim, and [Testing and CI](docs/development/testing.md) for the commands.
 
 ## Contributing and security reports
 
