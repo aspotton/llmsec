@@ -34,7 +34,7 @@ Read the closest `AGENTS.md` in the subtree you are editing. For architectural o
 - Architecture: `docs/architecture/`
 - Concepts and public API: `docs/concepts/`
 - Usage guides: `docs/guides/`
-- Security progress evidence (eval corpus and tripwire runner): `evals/README.md`
+- Security progress evidence (fixed eval corpus, tripwire runner, adaptive mutation ladder): `evals/README.md`
 - Threats and limitations: `docs/security/`
 - Development/CI conventions: `docs/development/`
 - Future architecture and phased work: `docs/roadmap/`
