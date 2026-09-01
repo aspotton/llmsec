@@ -27,6 +27,8 @@ Policy
 Decision
 ```
 
-The future architecture adds provenance/authority, source-influence controls, tool/action authorization, memory controls, streaming, long-context aggregation, and project-trained compact classifiers without replacing this core flow.
+Alongside this text pipeline, a separate commit-gate seam authorizes proposed tool calls: `llmsec.actions.ReferenceMonitor` decides over a host-declared tool registry, granted capabilities, digest-bound approvals, and (optionally, tightening-only) findings, producing an `AuthorizationDecision` instead of a content `Decision`. The two paths share the detector vocabulary but not the decision type: admitting content and committing an action are different questions. See [Tool authorization](../concepts/tool-authorization.md).
+
+The future architecture adds provenance/authority, source-influence controls, memory controls, streaming, long-context aggregation, and project-trained compact classifiers without replacing this core flow.
 
 The V0.1 implementation keeps these seams explicit so future layers can be composed rather than forcing a rewrite.

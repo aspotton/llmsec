@@ -11,13 +11,23 @@ llmsec assumes that natural-language content supplied to an LLM can be adversari
 - obvious secret material;
 - simple context-padding anomalies.
 
+## Now enforced (conditional on a truthful registry)
+
+The host-side reference monitor (`llmsec.actions`) enforces these outside the LLM, provided the tool registry truthfully declares each tool's effects. See [Security limitations](limitations.md) for the mis-declaration and TOCTOU conditions.
+
+| Threat | Enforcement |
+| --- | --- |
+| Tool-call manipulation | Unknown tools DENY (`unregistered_tool`); arguments must satisfy the host-declared schema or DENY (`schema_violation`); the call an approval bound to is digest-checked, so a modified replay DENIES (`approval_mismatch`). |
+| Parameter manipulation | Declared `ParamKind`/`ParamRole` schema checks deny wrong-typed, unknown, or over-length arguments; exact type matching means `true` never passes as a count. READ-declared tools with risk-role params surface as `suspected_misdeclaration`. |
+| Unauthorized external effects | Every non-READ effect class is fail-closed: without a host-granted capability the call DENIES (`missing_capability`). Detector findings can tighten this (HIGH forces DENY) but can never grant a capability or satisfy an approval. |
+| Forged user approval | Approval is a host-supplied `Approval` bound to the SHA-256 of one exact call, never parsed from call arguments; approval fields inside a model-produced payload are inert; `requires_approval` cannot be bypassed by omitting the approval argument (REQUIRE_APPROVAL, not ALLOW). |
+
+A `Guard` with no monitor configured DENIES every call (`no_monitor`): the default state is no authority, not full authority.
+
 ## Architectural future scope
 
 - role confusion and role impersonation;
 - long-context and fragmented attacks;
-- tool-call and parameter manipulation;
-- unauthorized external effects;
-- forged user approval;
 - provenance and authority confusion;
 - source-influence violations;
 - persistent memory manipulation;
@@ -26,4 +36,4 @@ llmsec assumes that natural-language content supplied to an LLM can be adversari
 
 ## Core assumption
 
-The LLM is treated as an untrusted reasoning component. A future reference monitor will enforce capabilities and effects outside the LLM so that detector failure does not automatically become action authorization.
+The LLM is treated as an untrusted reasoning component. The reference monitor enforces capabilities and effects outside the LLM so that detector failure does not automatically become action authorization.
