@@ -235,7 +235,9 @@ def test_proposal_sha256_immune_to_source_dict_mutation() -> None:
         (AuthorizationAction.DENY, False),
     ],
 )
-def test_commit_allowed_matches_allow_only(action: AuthorizationAction, expected_commit: bool) -> None:
+def test_commit_allowed_matches_allow_only(
+    action: AuthorizationAction, expected_commit: bool
+) -> None:
     decision = AuthorizationDecision(
         action=action,
         proposal_sha256="0123456789abcdef" * 4,
