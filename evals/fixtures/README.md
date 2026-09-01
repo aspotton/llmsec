@@ -21,6 +21,8 @@ case must NOT be ALLOWed (BLOCK or CONFIRM both count as blocked, mirroring
 | `secrets_obfuscation` | 6 | private-key markers, an AWS example key ID, and base64 of an injection phrase (decode-and-match path) |
 | `benign` | 12 | realistic safe text incl. near-misses: benign base64 (`aGVsbG8gd29ybGQ=`, too short to enter the decode path), a non-extraction mention of "system prompt", a docs-quote of "disregard ...", "approved by the user" word-order flip |
 
+Decode-path scope of the row above: that near-miss is specific to this fixed fixture. The adaptive corpus's `base64_wrap` payloads (`evals/adaptive/`, roadmap 08) are built by base64-encoding a full attack sentence, so they exceed the 16-character minimum of `_BASE64_RE` (`src/llmsec/content/views.py:7`) and **do** enter the decode path: the encoding detector scores a decoded hit with an `_INJECTION_HINT` match at 0.94 (`encoded_instruction`, above the 0.75 confirm threshold) and one without a hint at 0.62 (below it, so no CONFIRM; `src/llmsec/detectors/encoding.py`, `src/llmsec/policy/default.py`). By contrast the 15-character `aGVsbG8gd29ybGQ=` never enters the path at all.
+
 Unicode evasion cases store **literal code points** in the JSONL data (per
 `evals/AGENTS.md`: literal Unicode belongs in data fixtures when reproducing the exact
 code points is the evaluation). In any `.py` file these would have to be `\u` escapes.
