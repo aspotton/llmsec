@@ -30,8 +30,9 @@ def _param(
     name: str,
     kind: ParamKind = ParamKind.STR,
     role: ParamRole = ParamRole.GENERIC,
+    required: bool = True,
 ) -> dict[str, object]:
-    return {"name": name, "kind": kind.value, "role": role.value, "required": True}
+    return {"name": name, "kind": kind.value, "role": role.value, "required": required}
 
 
 def make_registry() -> object:
@@ -41,7 +42,16 @@ def make_registry() -> object:
                 {
                     "name": "egress",
                     "effects": [EffectClass.DATA_EGRESS.value],
-                    "params": [_param("payload", role=ParamRole.PAYLOAD)],
+                    "params": [
+                        _param("payload", role=ParamRole.PAYLOAD),
+                        # Lock-in 3 (plan 5.2) demos that approval-shaped keys in
+                        # the payload are inert. Declaring them as ordinary
+                        # optional params keeps the call schema-valid so it
+                        # reaches step 4, where the Approval ARGUMENT (never
+                        # call.arguments) is the only authority.
+                        _param("approved", kind=ParamKind.BOOL, required=False),
+                        _param("proposal_sha256", required=False),
+                    ],
                 },
                 {
                     "name": "reader",

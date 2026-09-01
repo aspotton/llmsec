@@ -7,8 +7,9 @@ whole module fails to import (RED). House style: plain asserts with messages, no
 fixtures or mocks (see tests/unit/test_policy.py).
 """
 
-import pytest
 from enum import Enum
+
+import pytest
 
 from llmsec.actions import (
     EFFECT_CONTROL,

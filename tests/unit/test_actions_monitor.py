@@ -11,15 +11,14 @@ import pytest
 
 from llmsec import Finding, Severity
 from llmsec.actions import (
+    AuthorizationAction,
     Capability,
     EffectClass,
     ParamKind,
     ParamRole,
-    AuthorizationAction,
     ToolCall,
     registry_from_dict,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Helper factories (functions from the 5.1 surface).                            #

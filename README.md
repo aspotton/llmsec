@@ -60,6 +60,7 @@ result = guard.inspect(
 - Context/padding anomaly checks.
 - A deliberately simple heuristic injection detector used only as a bootstrap semantic detector.
 - Findings separated from policy decisions.
+- Host-side tool/action authorization: `guard.authorize_tool_call(...)` gates a proposed `ToolCall` against a host-declared registry, granted capabilities, and digest-bound approvals ([Tool authorization](docs/concepts/tool-authorization.md)).
 - Synchronous, asynchronous, batch, and convenience APIs.
 - Profile presets: `guard = Guard.from_profile(Profile.AGENT)` for per-application-shape policy thresholds.
 - A small CLI.
