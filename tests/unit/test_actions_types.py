@@ -235,13 +235,13 @@ def test_proposal_sha256_immune_to_source_dict_mutation() -> None:
         (AuthorizationAction.DENY, False),
     ],
 )
-def test_commit_allowed_matches_allow_only(action: AuthorizationAction, expected: bool) -> None:
+def test_commit_allowed_matches_allow_only(action: AuthorizationAction, expected_commit: bool) -> None:
     decision = AuthorizationDecision(
         action=action,
         proposal_sha256="0123456789abcdef" * 4,
         reason="authorized",
     )
-    assert decision.commit_allowed is expected, (action, decision.commit_allowed)
+    assert decision.commit_allowed is expected_commit, (action, decision.commit_allowed)
 
 
 def test_denied_true_only_for_deny() -> None:
