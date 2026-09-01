@@ -26,6 +26,8 @@ jobs:
         run: mypy src
       - name: Build wheel
         run: python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Adaptive corpus regen byte-check
+        run: PYTHONPATH=src python3 evals/gen_adaptive.py --regenerate
 
   tests:
     runs-on: ubuntu-latest
