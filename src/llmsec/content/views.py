@@ -24,6 +24,9 @@ _BIDI_CONTROLS = {
     "\u2068",
     "\u2069",
 }
+# Invisible operators (U+2061..U+2064): zero-width, so they can split a secret
+# literal without a visible gap. U+2060 is already in _ZERO_WIDTH.
+_INVISIBLE_OPERATORS = {"\u2061", "\u2062", "\u2063", "\u2064"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +79,9 @@ def _remove_invisible_controls(text: str) -> str:
     return "".join(
         character
         for character in text
-        if character not in _ZERO_WIDTH and character not in _BIDI_CONTROLS
+        if character not in _ZERO_WIDTH
+        and character not in _BIDI_CONTROLS
+        and character not in _INVISIBLE_OPERATORS
     )
 
 

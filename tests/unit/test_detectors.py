@@ -1,6 +1,8 @@
 import asyncio
 import base64
 
+import pytest
+
 from llmsec import Severity, Stage, Trust
 from llmsec.content import build_content_views
 from llmsec.core import SecurityContext
@@ -23,6 +25,21 @@ def test_unicode_detector_finds_zero_width_character() -> None:
     findings = run(UnicodeDetector(), "hello\u200bworld")
     assert findings[0].category == "unicode_obfuscation"
     assert findings[0].severity is Severity.HIGH
+
+
+# Invisible operators (U+2061..U+2064) smuggled into a secret literal are the
+# secret_zw_in bypass; they must be tagged with their own mechanism, not zero_width.
+@pytest.mark.parametrize("operator", ["\u2061", "\u2062", "\u2063", "\u2064"])
+def test_unicode_detector_flags_invisible_operator(operator: str) -> None:
+    findings = run(UnicodeDetector(), f"AKI{operator}AIOSFODNN7EXAMPLE")
+    assert findings[0].category == "unicode_obfuscation"
+    assert findings[0].severity is Severity.HIGH
+    assert findings[0].properties["mechanisms"] == ("invisible_operator",)
+
+
+def test_unicode_detector_ignores_clean_text() -> None:
+    findings = run(UnicodeDetector(), "Please review the quarterly budget report.")
+    assert findings == []
 
 
 def test_encoding_detector_escalates_encoded_instruction() -> None:

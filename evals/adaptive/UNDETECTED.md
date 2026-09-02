@@ -82,15 +82,10 @@
 | io-012_rot13 | rot13 | io-012 |
 | io-012_whitespace_split | whitespace_split | io-012 |
 | sec-001_base64_nest2 | base64_nest2 | sec-001 |
-| sec-001_secret_zw_in | secret_zw_in | sec-001 |
 | sec-002_base64_nest2 | base64_nest2 | sec-002 |
-| sec-002_secret_zw_in | secret_zw_in | sec-002 |
 | sec-003_base64_nest2 | base64_nest2 | sec-003 |
-| sec-003_secret_zw_in | secret_zw_in | sec-003 |
 | sec-004_base64_nest2 | base64_nest2 | sec-004 |
-| sec-004_secret_zw_in | secret_zw_in | sec-004 |
 | sec-005_base64_nest2 | base64_nest2 | sec-005 |
-| sec-005_secret_zw_in | secret_zw_in | sec-005 |
 | sec-006_base64_nest2 | base64_nest2 | sec-006 |
 | spe-001_base64_nest2 | base64_nest2 | spe-001 |
 | spe-001_hyphen_split | hyphen_split | spe-001 |
