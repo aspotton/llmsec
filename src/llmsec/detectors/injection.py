@@ -55,7 +55,15 @@ class HeuristicInjectionDetector:
 
     async def inspect(self, context: SecurityContext, views: ContentViews) -> list[Finding]:
         findings: list[Finding] = []
-        search_views = (views.raw, views.nfkc, views.visible_controls_removed)
+        # Scan decoded payloads too (base64/rot13 candidates): an encoded attack is
+        # the same wording once decoded. FP-safety is pinned by
+        # tests/unit/test_injection_fp_harness.py (no benign decoded surface matches).
+        search_views = (
+            views.raw,
+            views.nfkc,
+            views.visible_controls_removed,
+            *(candidate.decoded for candidate in views.decoded_candidates),
+        )
 
         for category, pattern, base_confidence in _PATTERNS:
             match = None

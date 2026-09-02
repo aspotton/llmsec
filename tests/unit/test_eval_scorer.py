@@ -109,6 +109,12 @@ def test_benign_cases_never_match_injection_patterns() -> None:
     benign_cases = [case for case in load_corpus(_CORPUS_DIR) if not case.expected_block]
     for case in benign_cases:
         view = build_content_views(case.text)
+        surfaces = (
+            view.raw,
+            view.nfkc,
+            view.visible_controls_removed,
+            *(candidate.decoded for candidate in view.decoded_candidates),
+        )
         for pattern in (pattern for _, pattern, _ in _PATTERNS):
-            for surface in (view.raw, view.nfkc, view.visible_controls_removed):
+            for surface in surfaces:
                 assert not pattern.search(surface)
