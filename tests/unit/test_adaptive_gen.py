@@ -126,15 +126,15 @@ def test_held_in_rows_self_block_under_default_guard() -> None:
 
 
 def test_whitespace_split_rows_use_measured_split() -> None:
-    """Calibrated gap: whitespace_split breaks the word-boundary heuristic on
-    SOME bases, so at least one such row is a measured held-OUT gap. Splits are
-    measured at generation, so rows the guard does catch become held-IN
-    tripwires: every row's label must match a fresh measurement here."""
+    """The whitespace/hyphen de-split detector re-armed every split row: the
+    loose-keyword injection variants now catch the whole family, so every
+    whitespace_split row measures held-IN. Splits are measured at generation, so
+    each row's stored label must match a fresh measurement here."""
     guard = Guard.default(diagnostics=True)
     rows = [row for row in _rows() if row["mutation"] == "whitespace_split"]
     assert rows, "generate() must include whitespace_split rows"
-    assert any(row["split"] == gen_adaptive.HELD_OUT for row in rows), (
-        "generate() must include measured held-out whitespace_split gap rows"
+    assert all(row["split"] == gen_adaptive.HELD_IN for row in rows), (
+        "de-split detector must leave no held-out whitespace_split gap rows"
     )
     for row in rows:
         decision = guard.inspect(

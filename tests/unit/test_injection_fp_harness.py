@@ -26,7 +26,7 @@ from corpus import load_corpus
 
 from llmsec import DecisionAction, Guard, Stage, Trust
 from llmsec.content import build_content_views
-from llmsec.detectors.injection import _PATTERNS
+from llmsec.detectors.injection import _LOOSE_PATTERNS, _PATTERNS
 
 _ROOT = Path(__file__).resolve().parents[2]
 _ADAPTIVE = _ROOT / "evals" / "adaptive"
@@ -65,6 +65,82 @@ def test_benign_surfaces_never_match_injection_patterns() -> None:
                 assert not pattern.search(surface), (
                     f"{name} matched benign surface {surface[:60]!r}"
                 )
+
+
+def _raw_nfkc(text: str) -> tuple[str, str]:
+    view = build_content_views(text)
+    return view.raw, view.nfkc
+
+
+def test_benign_raw_nfkc_never_match_loose_injection_patterns() -> None:
+    """The de-split loose variants scan only the raw and NFKC surfaces; they
+    interleave keyword letters with ``[\\s-]?``, so the same benign texts must be
+    clean there too -- the benignmutate rows ARE whitespace_split transforms, and
+    a match would abort generation (FP-budget SystemExit)."""
+    for text in _benign_texts():
+        for surface in _raw_nfkc(text):
+            for name, pattern, _ in _LOOSE_PATTERNS:
+                assert not pattern.search(surface), (
+                    f"loose {name} matched benign surface {surface[:60]!r}"
+                )
+
+
+# The 30 whitespace/hyphen split rows that were published gaps when the loose
+# variants landed. Generation relabels them held_in, so pin the ids from the
+# pre-landing baseline rather than reading the (now reduced) gap file.
+_SPLIT_GAP_ROWS = frozenset(
+    {
+        "io-001_hyphen_split",
+        "io-001_whitespace_split",
+        "io-003_hyphen_split",
+        "io-003_whitespace_split",
+        "io-004_hyphen_split",
+        "io-004_whitespace_split",
+        "io-005_hyphen_split",
+        "io-005_whitespace_split",
+        "io-006_hyphen_split",
+        "io-006_whitespace_split",
+        "io-007_hyphen_split",
+        "io-007_whitespace_split",
+        "io-008_hyphen_split",
+        "io-008_whitespace_split",
+        "io-012_hyphen_split",
+        "io-012_whitespace_split",
+        "spe-001_hyphen_split",
+        "spe-001_whitespace_split",
+        "spe-002_hyphen_split",
+        "spe-002_whitespace_split",
+        "spe-004_hyphen_split",
+        "spe-004_whitespace_split",
+        "spe-006_hyphen_split",
+        "spe-006_whitespace_split",
+        "spe-007_hyphen_split",
+        "spe-007_whitespace_split",
+        "spe-010_hyphen_split",
+        "spe-010_whitespace_split",
+        "spe-012_hyphen_split",
+        "spe-012_whitespace_split",
+    }
+)
+
+
+def test_split_gap_rows_match_loose_patterns_and_block() -> None:
+    guard = Guard.default()
+    seen: set[str] = set()
+    for path in sorted((_ADAPTIVE / "fixtures").glob("*_split__*/cases.jsonl")):
+        for row in _rows(path):
+            if row["id"] not in _SPLIT_GAP_ROWS:
+                continue
+            seen.add(row["id"])
+            raw, nfkc = _raw_nfkc(row["text"])
+            assert any(
+                pattern.search(value) for _, pattern, _ in _LOOSE_PATTERNS for value in (raw, nfkc)
+            ), row["id"]
+            decision = guard.inspect(
+                row["text"], stage=Stage.RETRIEVAL_DOCUMENT, trust=Trust.UNTRUSTED
+            )
+            assert decision.action is not DecisionAction.ALLOW, row["id"]
+    assert seen == _SPLIT_GAP_ROWS
 
 
 # The 19 rot13 rows that were published gaps when the decoded-candidate scan

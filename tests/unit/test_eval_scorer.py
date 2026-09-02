@@ -104,7 +104,7 @@ def test_benign_cases_never_match_injection_patterns() -> None:
     # because the guard is against detector-implementation drift; production code
     # must never reach for it.
     from llmsec.content import build_content_views
-    from llmsec.detectors.injection import _PATTERNS
+    from llmsec.detectors.injection import _LOOSE_PATTERNS, _PATTERNS
 
     benign_cases = [case for case in load_corpus(_CORPUS_DIR) if not case.expected_block]
     for case in benign_cases:
@@ -117,4 +117,8 @@ def test_benign_cases_never_match_injection_patterns() -> None:
         )
         for pattern in (pattern for _, pattern, _ in _PATTERNS):
             for surface in surfaces:
+                assert not pattern.search(surface)
+        # Loose variants scan only raw + nfkc (never decoded candidates).
+        for pattern in (pattern for _, pattern, _ in _LOOSE_PATTERNS):
+            for surface in (view.raw, view.nfkc):
                 assert not pattern.search(surface)
