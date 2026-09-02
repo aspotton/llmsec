@@ -64,6 +64,11 @@ BENIGN_DIR = "benignmutate__handauthored"
 # detector regression, never a number to lower. Held-out-only dirs carry no entry.
 HELD_IN_FLOORS: dict[str, float] = dict.fromkeys(
     (
+        "b64_literal_nest2__secrets_obfuscation",
+        "base64_nest2__fake_authority",
+        "base64_nest2__instruction_override",
+        "base64_nest2__secrets_obfuscation",
+        "base64_nest2__system_prompt_extraction",
         "base64_wrap__fake_authority",
         "base64_wrap__instruction_override",
         "base64_wrap__secrets_obfuscation",
@@ -79,7 +84,9 @@ HELD_IN_FLOORS: dict[str, float] = dict.fromkeys(
         "hyphen_split__system_prompt_extraction",
         "paraphrase_io__fake_authority",
         "paraphrase_io__instruction_override",
+        "rot13__fake_authority",
         "rot13__instruction_override",
+        "rot13__system_prompt_extraction",
         "secret_zw_in__secrets_obfuscation",
         "secret_zw_text__secrets_obfuscation",
         "whitespace_split__fake_authority",
