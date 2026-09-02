@@ -6,7 +6,9 @@ Important limitations:
 
 - the prompt-injection detector is heuristic, not a trained semantic model;
 - Unicode coverage is intentionally incomplete;
-- encoded-content inspection is currently limited to bounded printable Base64 candidates;
+- encoded-content inspection is limited to bounded depth-2 printable Base64 candidates plus shape-gated ROT13 candidates;
+- the adaptive mutation ladder still leaves 31 published `paraphrase_io` held-out gaps (semantic synonym substitution; see `evals/adaptive/UNDETECTED.md`) — closing them needs a trained semantic detector, not more heuristics;
+- scanning decoded candidates (Base64/ROT13) against injection patterns is a new false-positive surface, pinned by `tests/unit/test_injection_fp_harness.py`. As a side effect, benign prose can carry an informational 0.62/MEDIUM `encoded_content` finding whenever a ROT13 candidate exists (ROT13 of English is English-shaped); the default policy never blocks or confirms on it;
 - the reference monitor authorizes tool calls against the host's declared registry only; it cannot audit what a tool actually does (see "Action authorization limits" below);
 - the OpenAI-compatible wrapper (`llmsec.integrations.openai_compat`) inspects text at one integration seam; it is not a tool/action reference monitor;
 - there is no provenance/authority or data-lineage engine yet;

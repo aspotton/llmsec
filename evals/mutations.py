@@ -31,15 +31,15 @@ from corpus import EvalCase
 
 from llmsec.detectors.encoding import _INJECTION_HINT
 
-# Zero-width space (U+200B): in the runtime strip set, so UnicodeDetector flags
-# it -> the mutation is held-in (blocked). Function-application (U+2061): NOT in
-# the strip set -> the honest held-out gap when smuggled inside a secret token.
+# Zero-width space (U+200B) and function-application (U+2061): both in the
+# runtime strip set since the gap-closure work, so UnicodeDetector flags them
+# and the mutation is held-in (blocked).
 _ZWSP = "\u200b"
 _FUNCTION_APPLICATION = "\u2061"
 
 # A run of 24+ base64 alphabet chars: a pre-existing base64 literal in the base
-# text. Wrapping such a base defeats the encoding detector's one-layer decode, so
-# we route the hint-bearing wrapper into the payload instead (see _payload()).
+# text. Wrapping such a base nests literals, so we route the hint-bearing
+# wrapper into the payload instead (see _payload()).
 _BASE64_LITERAL_RE = re.compile(r"[A-Za-z0-9+/=]{24,}")
 
 # First whitespace-delimited token ("keyword"), and the secret-token span we must
@@ -169,10 +169,11 @@ def _base64_nest2(text: str, rng: random.Random) -> list[str]:
 
 
 def _secret_zw_in(text: str, rng: random.Random) -> list[str]:
-    """Smuggle U+2061 *inside* the secret token (honest held-out bypass).
+    """Smuggle U+2061 *inside* the secret token.
 
-    U+2061 is not in the Unicode strip set and it breaks the AKIA / ``BEGIN ...
-    KEY`` literal, so neither SecretDetector nor UnicodeDetector fires -> ALLOW.
+    U+2061 is now in the Unicode strip/detect sets (invisible-operator family),
+    so UnicodeDetector fires -> BLOCK (held in). The secret literal itself is
+    still broken for SecretDetector; detection comes from the Unicode view.
     """
     del rng
     key = re.search(r"AKIA", text)
