@@ -35,8 +35,10 @@ keys exactly `{id, expected_block, text, mutation, base_id, split}`.
   tripwires: if a future detector change lets one through, the fixed-vs-adaptive
   comparison shows a real regression.
 - `held_out` — the guard *measured-Allowed* the row. These are published
-  detection gaps (honest bypasses such as `base64_nest2`, `secret_zw_in`, or the
-  `whitespace_split`/`rot13`/`hyphen_split` rows whose heuristics don't fire).
+  detection gaps. After the gap-closure work the only remaining gap family is
+  `paraphrase_io` (semantic synonym substitution, 31 rows); the transformation
+  gaps `base64_nest2`, `rot13`, `whitespace_split`, `hyphen_split`, and
+  `secret_zw_in` are closed and their rows are now `held_in`.
 
 `mutations.SPLIT` is only the static prior the measurement validates. Two drift
 guards abort generation rather than emit a lying corpus:
@@ -62,8 +64,8 @@ guards abort generation rather than emit a lying corpus:
 - **`b64_literal_nest2__<family>`**: the `base64_nest2` rows whose base already
   embeds a base64 literal (`mutations._BASE64_LITERAL_RE` match). This is the
   simplified routing that replaces the planned per-base `b64_literal_rot13`
-  special-casing: the row itself is still the double-wrap, and it stays in the
-  held-out gap population.
+  special-casing: the row itself is still the double-wrap, now caught by the
+  depth-2 Base64 flattening and so `held_in`.
 
 ## Seed / pin model
 

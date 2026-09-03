@@ -17,6 +17,9 @@ _BIDI_CONTROLS = {
     "\u2068",
     "\u2069",
 }
+# Invisible operators (U+2061..U+2064): zero-width, so they can split a secret
+# literal without a visible gap. U+2060 is already in _ZERO_WIDTH.
+_INVISIBLE_OPERATORS = {"\u2061", "\u2062", "\u2063", "\u2064"}
 
 
 class UnicodeDetector:
@@ -41,6 +44,9 @@ class UnicodeDetector:
             elif character in _BIDI_CONTROLS:
                 suspicious_spans.append((index, index + 1))
                 mechanisms.add("bidi_control")
+            elif character in _INVISIBLE_OPERATORS:
+                suspicious_spans.append((index, index + 1))
+                mechanisms.add("invisible_operator")
             elif 0xE0000 <= codepoint <= 0xE007F:
                 suspicious_spans.append((index, index + 1))
                 mechanisms.add("unicode_tag")

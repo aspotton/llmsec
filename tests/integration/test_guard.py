@@ -15,7 +15,11 @@ pytestmark = pytest.mark.integration
 def test_default_guard_allows_benign_text() -> None:
     result = Guard.default().inspect_user_input("Please summarize this paragraph.")
     assert result.allowed
-    assert not result.findings
+    # Every >=16-char alphabetic line now yields a shape-gated rot13 candidate
+    # (rot13 ciphertext of English is indistinguishable from English by shape),
+    # so benign text may carry the informational 0.62/MEDIUM encoded_content
+    # finding. The contract is that nothing reaches the confirm threshold.
+    assert all(finding.confidence < 0.75 for finding in result.findings)
 
 
 def test_default_guard_blocks_clear_injection_pattern() -> None:

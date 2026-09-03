@@ -27,9 +27,10 @@ _REAL_CORPUS = _ROOT / "evals" / "adaptive" / "fixtures"
 _BENIGN_DIR = "benignmutate__handauthored"
 
 # A floored dir name (present in HELD_IN_FLOORS) and a held-out-only dir name
-# (NOT floored) so the floor loop and the gap loop are exercised independently.
+# (NOT floored, and never floorable: paraphrase_io gaps are the deferred family)
+# so the floor loop and the gap loop are exercised independently.
 _FLOORED_IN = "zero_width__instruction_override"
-_HO_ONLY_GAP = "base64_nest2__instruction_override"
+_HO_ONLY_GAP = "paraphrase_io__system_prompt_extraction"
 
 
 def _row(case_id: str, *, split: str, expected_block: bool, mutation: str, base_id: str) -> str:
