@@ -32,7 +32,7 @@ dev = [
   "ruff>=0.9",
 ]
 onnx = [
-  "onnxruntime>=1.29.0",
+  "onnxruntime>=1.31.1",
 ]
 
 [project.scripts]
